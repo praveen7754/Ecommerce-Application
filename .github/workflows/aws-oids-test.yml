@@ -10,6 +10,7 @@ permissions:
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: ecommerce-test
+  AWS_ACCOUNT_ID: "743320495203"
 
 jobs:
   ecr-push:
@@ -17,7 +18,7 @@ jobs:
 
     steps:
 
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Configure AWS credentials
@@ -27,25 +28,32 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Create test Dockerfile
+        run: |
+          cat > Dockerfile <<'EOF'
+          FROM nginx:alpine
+          RUN echo "Ecommerce CI/CD ECR Test" > /usr/share/nginx/html/index.html
+          EOF
 
       - name: Build Docker image
         run: |
-          docker build -t $ECR_REPOSITORY:latest .
+          docker build \
+            -t $ECR_REPOSITORY:latest .
 
       - name: Tag Docker image
         run: |
           docker tag \
             $ECR_REPOSITORY:latest \
-            743320495203.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPOSITORY:latest
+            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
 
-      - name: Push Docker image
+      - name: Push image to ECR
         run: |
           docker push \
-            743320495203.dkr.ecr.us-east-1.amazonaws.com/$ECR_REPOSITORY:latest
+            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
 
-      - name: Verify image
+      - name: Verify image in ECR
         run: |
           aws ecr describe-images \
             --repository-name $ECR_REPOSITORY \
