@@ -19,6 +19,4 @@ jobs:
           aws-region: us-east-1
 
       - name: Verify AWS connection
-        run: |
-          aws sts get-caller-identity
-          aws configure list
+        run: aws sts get-caller-identity
