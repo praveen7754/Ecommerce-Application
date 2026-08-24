@@ -2,10 +2,12 @@ name: Terraform Infrastructure
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - "terraform/**"
       - ".github/workflows/terraform.yml"
+
   workflow_dispatch:
 
 permissions:
@@ -19,39 +21,52 @@ env:
 
 jobs:
   terraform:
+    name: Terraform
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout repository
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 2. Authenticate GitHub → AWS using OIDC
       - name: Configure AWS credentials with OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::743320495203:role/GitHubActions-Ecommerce
           aws-region: ${{ env.AWS_REGION }}
 
+      # 3. Verify AWS authentication
+      - name: Verify AWS Identity
+        run: aws sts get-caller-identity
+
+      # 4. Install Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.8
 
+      # 5. Terraform Init
       - name: Terraform Init
         working-directory: terraform
         run: terraform init
 
+      # 6. Terraform Format
       - name: Terraform Format
         working-directory: terraform
         run: terraform fmt -check -recursive
 
+      # 7. Terraform Validate
       - name: Terraform Validate
         working-directory: terraform
         run: terraform validate
 
+      # 8. Terraform Plan
       - name: Terraform Plan
         working-directory: terraform
         run: terraform plan -out=tfplan
 
+      # 9. Terraform Apply
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
         working-directory: terraform
