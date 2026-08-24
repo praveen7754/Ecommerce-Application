@@ -1,0 +1,26 @@
+output "vpc_id" {
+  value = aws_vpc.main.id
+}
+
+output "eks_cluster_name" {
+  value = aws_eks_cluster.main.name
+}
+
+output "eks_cluster_endpoint" {
+  value = aws_eks_cluster.main.endpoint
+}
+
+output "rds_endpoint" {
+  value = aws_db_instance.mysql.address
+}
+
+output "redis_endpoint" {
+  value = aws_elasticache_replication_group.redis.primary_endpoint_address
+}
+
+output "ecr_repository_urls" {
+  value = {
+    for name, repo in aws_ecr_repository.services :
+    name => repo.repository_url
+  }
+}

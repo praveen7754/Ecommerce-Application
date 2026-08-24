@@ -1,0 +1,68 @@
+name: Ecommerce CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/**"
+      - ".github/workflows/ci.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: "743320495203"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - user-service
+          - product-service
+          - cart-service
+          - order-service
+          - payment-service
+          - inventory-service
+          - notification-service
+          - review-service
+          - shipping-service
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials with OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::743320495203:role/GitHubActions-Ecommerce
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Check ECR repository
+        run: |
+          aws ecr describe-repositories             --repository-names "${{ matrix.service }}"             --region "$AWS_REGION"
+
+      - name: Build image
+        run: |
+          docker build             -t "${{ matrix.service }}:${{ github.sha }}"             "services/${{ matrix.service }}"
+
+      - name: Tag image
+        run: |
+          ECR="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${{ matrix.service }}"
+          docker tag "${{ matrix.service }}:${{ github.sha }}" "${ECR}:${{ github.sha }}"
+          docker tag "${{ matrix.service }}:${{ github.sha }}" "${ECR}:latest"
+
+      - name: Push image
+        run: |
+          ECR="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${{ matrix.service }}"
+          docker push "${ECR}:${{ github.sha }}"
+          docker push "${ECR}:latest"
